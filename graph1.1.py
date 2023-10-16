@@ -7,16 +7,27 @@ import numexpr as ne
 from tkinter import * 
 import openpyxl as op
 from tkinter import ttk
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
+                                               NavigationToolbar2Tk)
+from matplotlib.figure import Figure
 
-
+"""
+Нужно вынести логику графопостроитель в отдельный класс, который в конструктора принимает экземпляр Axes и реализует методы вроде plot, bar.
+"""
 
 class Graph:
+    coords=[]
     #при создании должно быть задано уравнение, подключена таблица с данными для переменной(они идут в список)
-    def __init__(self,x, equal):
+    def __init__(self,chb,x, equal):
         self.x=x
-        self.equal=equal
-        #добавить создание plt объекта для набивки и создания нескольких графиков, сделать сеттер
+        self.y=equal
+        self.chb=chb
         
+        self.y=[list(self.y[i]) for i in range(len(self.y))]
+        
+        #добавить создание plt объекта для набивки и создания нескольких графиков, сделать сеттер
+
         
           # from exel
 
@@ -27,16 +38,59 @@ class Graph:
         
     #далее нужно вывести этот график
     def show(self,lab="f(x)",xl="x",yl="y",lt='k',lims=False ):
+        #print(self.chb)
+        root=Tk()
 
-        plt.plot(self.x,self.equal,lt,label=lab)
-        plt.xlabel(xl)
-        plt.ylabel(yl)
-        if lims:
-            plt.ylim((0,self.equal[len(self.equal)]))
-            plt.xlim((0,self.x[len(self.x)]))
+        fig =Figure(figsize=(5,4),dpi=100)#создали пустое поле для рисования
+        #self.x self.y
+        ax=fig.add_subplot()
+        
+        if self.chb==0:
+            if len(self.x)>1:
+               for i in range(len(self.x)):
+                   n=int(f"{len(self.x)}1{i+1}")
+                   
+                   axes=fig.add_subplot(n)
+                   axes.set_title(f"График №{i+1}")
+                   c=axes.plot(self.x[i],self.y[i],label=lab,)
+            else:
+                line=ax.plot(self.x,self.y,label=lab,)
 
-        plt.legend()
-        plt.show()
+        else:
+            if len(self.x)>1:
+                #gr_lst=[]
+                for i in range(len(self.x)):
+                    ax.plot(self.x[i],self.y[i])
+            
+            else:
+
+                line=ax.plot(self.x,self.y,label=lab,)
+
+        ax.set_xlabel(xl)
+        ax.set_ylabel(yl)
+        
+        # создаем холст канвас
+        canvas=FigureCanvasTkAgg(fig,master=root)# переделать, сделать чтобы мастер со входа класса брался
+        canvas.draw()
+        toolbar=NavigationToolbar2Tk(canvas, root, pack_toolbar=False)# аналогично см window
+        toolbar.update()
+        canvas.mpl_connect(
+    "key_press_event", lambda event: print(f"you pressed {event.key}"))
+        canvas.mpl_connect("key_press_event", key_press_handler)
+
+        button_quit = Button(master=root, text="Quit", command=root.destroy)
+        button_quit.pack(side=BOTTOM)
+        toolbar.pack(side=BOTTOM, fill=X)
+        canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=True)
+
+        root.mainloop()
+
+
+
+
+
+
+        
 
 #####
 
@@ -74,15 +128,19 @@ class DataFrame:
             self.data_inp.grid(column=1, row=3)
 
             self.column_label=Label(frame, text="Диапазон столбцов",font=("Arial Bold", 12))
+            
             self.column_label.grid(column=2,row=2)
 
             self.column_inp=Entry(frame, width=10)#стлобцы
+            self.column_inp.insert(END,"a,h")
             self.column_inp.grid(column=2, row=3)
 
             self.row_label=Label(frame,text="Диапазон строк",font=("Arial Bold", 12) )
+            
             self.row_label.grid(column=3,row=2)
 
             self.row_inp=Entry(frame, width=10)#строки
+            self.row_inp.insert(END,"1,3")
             self.row_inp.grid(column=3,row=3)
 
 
@@ -162,21 +220,9 @@ class DataFrame:
         x,y=self.res
         #сделать учет того, что х может быть 2мерным массивом=>несколько прямых на одном графике
         #выбор вывода графиков : по отдельности или несколько на одном
-        if self.chbutton_val():   #this part is not working
-            
-            g=Graph(x, y)
-            g.show(lab="f(x)",xl="x",yl="y",lt='k',lims=False )#we can create
-
-        else:
-            if len(x)>1:
-                
-                for i in range(len(x)):
-                    g=Graph(x[i], y[i])
-                    g.show(lab="f(x)",xl="x",yl="y",lt='k',lims=False )
-
-            else:
-                g=Graph(x, y)
-                g.show(lab="f(x)",xl="x",yl="y",lt='k',lims=False )
+      #this part is not working
+        g=Graph(self.chbutton_val(),x, y) #тут 2 двумерных массива
+        g.show(lab="f(x)",xl="x",yl="y",lt='k',lims=False )#we can create
 
 
 
